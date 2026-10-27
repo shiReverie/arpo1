@@ -98,8 +98,8 @@ build_docker_image:
         file: ./Dockerfile
         push: true
         tags: |
-          ghcr.io/ВАШ_НИКНЕЙМ/platformer-game:latest
-          ghcr.io/ВАШ_НИКНЕЙМ/platformer-game:${{ github.sha }}
+          ghcr.io/shiReverie/platformer-game:latest
+          ghcr.io/shiReverie/platformer-game:${{ github.sha }}
         run: |
           echo "=== Начало процесса зеркалирования ==="
           git push --force https://x-access-token:${BACKUP_TOKEN}@github.com/shiReverie/arpo2.git main
