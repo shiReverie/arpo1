@@ -75,31 +75,35 @@ jobs:
           path: artifacts/
 
   # ЗАДАЧА 2: зеркалирование в резервный репозиторий
-  mirror_repo:
-    needs: sanity_check # Начнется только после того, как успешно пройдет первая задача
-    if: github.repository == 'shiReverie/arpo1' # Только в оригинальном репо, чтобы избежать цикла в backup
+   mirror_repo:
+    needs: run_tests
+    if: github.repository == 'nbrouka/2d_platformer'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout full history
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Скачиваем полную историю коммитов для корректного зеркалирования
-          persist-credentials: false # Отключаем credential helper – чтобы GITHUB_TOKEN не перекрывал PAT
+          fetch-depth: 0
+          persist-credentials: false
 
       - name: Verify token is set
         env:
           BACKUP_TOKEN: ${{ secrets.BACKUP_TOKEN }}
         run: |
           if [ -z "$BACKUP_TOKEN" ]; then
-            echo "=== ОШИБКА: BACKUP_TOKEN is empty! Create a PAT with scopes [repo, workflow] ==="
+            echo "=== ОШИБКА: BACKUP_TOKEN пуст. Создайте PAT со scopes [repo, workflow] ==="
             exit 1
           else
-            echo "=== BACKUP_TOKEN is set (length: ${#BACKUP_TOKEN}) ==="
+            echo "=== BACKUP_TOKEN установлен (длина: ${#BACKUP_TOKEN}) ==="
           fi
 
       - name: Push to Backup Repository
         env:
           BACKUP_TOKEN: ${{ secrets.BACKUP_TOKEN }}
+        run: |
+          echo "=== Начало зеркалирования ==="
+          git push --force https://x-access-token:${BACKUP_TOKEN}@github.com/nbrouka/2d_platformer_backup.git master
+          echo "=== Код успешно продублирован ==="
 
 # =====================================================================
 # ЭТАП 3: Автоматическая сборка Docker-образа в облако
