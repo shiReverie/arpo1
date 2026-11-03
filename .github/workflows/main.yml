@@ -5,7 +5,6 @@ on:
     branches: [ "master" ]
 
 jobs:
-  # ЗАДАЧА 1: быстрая проверка структуры проекта
   sanity_check:
     runs-on: ubuntu-latest
     steps:
@@ -26,7 +25,6 @@ jobs:
           find Assets/ -name "BuildManager.cs" -print
           find Assets/ -name "*.asmdef" -print
 
-  # ЭТАП 2: запуск тестов Unity в облаке
   run_tests:
     needs: sanity_check
     runs-on: ubuntu-latest
@@ -34,22 +32,19 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          lfs: true   # поддержка Git LFS, если в игре тяжёлая графика
+          lfs: true
 
-      # Кэш Library — сильно ускоряет повторные запуски
       - uses: actions/cache@v4
         with:
           path: Library
           key: Library-${{ hashFiles('Packages/packages-lock.json', 'Assets/**/*.asmdef') }}
 
-      # Официальный CLI GameCI
       - name: Install GameCI CLI
         run: |
           curl -sL -o game-ci.tar.gz https://github.com/game-ci/cli/releases/download/v0.1.72/game-ci-linux-x64.tar.gz
           tar xzf game-ci.tar.gz ./game-ci
           echo "$PWD" >> $GITHUB_PATH
 
-      # ВАЖНО: версию Unity подставьте свою из ProjectVersion.txt
       - name: Run Unity Tests
         run: |
           game-ci test --docker --dockerShmSize=1025m \
@@ -66,7 +61,6 @@ jobs:
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
 
-      # Сохраняем результаты и логи (даже если тесты упали)
       - name: Upload test artifacts
         if: always()
         uses: actions/upload-artifact@v4
@@ -74,7 +68,7 @@ jobs:
           name: test-results
           path: artifacts/
 
-  # ЗАДАЧА 2: зеркалирование в резервный репозиторий
+
    mirror_repo:
     needs: run_tests
     if: github.repository == 'nbrouka/2d_platformer'
@@ -105,15 +99,10 @@ jobs:
           git push --force https://x-access-token:${BACKUP_TOKEN}@github.com/nbrouka/2d_platformer_backup.git master
           echo "=== Код успешно продублирован ==="
 
-# =====================================================================
-# ЭТАП 3: Автоматическая сборка Docker-образа в облако
-# =====================================================================
 build_docker_image:
   needs: sanity_check
   runs-on: ubuntu-latest
 
-  # КРИТИЧЕСКИ ВАЖНЫЕ СТРОКИ:
-  # Разрешаем этой конкретной задаче публиковать пакеты
   permissions:
     contents: read
     packages: write
@@ -123,8 +112,7 @@ build_docker_image:
       uses: actions/checkout@v4
 
     - name: Create Compressed Placeholders for Docker
-      # Генерируем фейковые .gz файлы, чтобы шаг COPY в Dockerfile
-      # не упал без реального билда Unity
+
       run: |
         mkdir -p Builds/WebGL/Build
         if [ -z "$(ls -A Builds/WebGL/Build)" ]; then
@@ -140,7 +128,6 @@ build_docker_image:
       with:
         registry: ghcr.io
         username: ${{ github.actor }}
-        # Системный автоматический токен GitHub
         password: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Build and Push Compressed Docker Image
